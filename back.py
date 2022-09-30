@@ -1,8 +1,11 @@
 import pygame
+import math
 
 factor = 1
 pygame.init()
 pygame.freetype.set_default_resolution(72*factor)
+
+imgloader = {"copycat":"char1","all cooperate":"char2","all cheat":"char3","grudger":"char4","detective":"char5","copykitten":"char6","simpleton":"char7","rando":"char8"}
 
 def end():
     pygame.quit()
@@ -98,10 +101,10 @@ class Section:
         self.objects = []
         self.active_position = [0,0]
     #For new label, offset = 0; For new line offset = line gap in terms of font size; For continuation offset = -1; For horizontally centering single label, offset = -2
-    def add_label(self,text,text_color,font_name,font_size,position,offset=-1,italic=False,bold=False,background="white"):
+    def add_label(self,text,text_color,font_name,font_size,position,offset=-1,italic=False,bold=False,background_color="white"):
         font_object = pygame.freetype.SysFont(font_name,int(font_size/factor),bold=bold,italic=italic) 
         font_object.antialiased = True
-        img = font_object.render(text,text_color,bgcolor=background)[0]
+        img = font_object.render(text,text_color,bgcolor=background_color)[0]
         if (offset==0):
             self.active_position= [position[0],position[1]]
         elif (offset==-2):
@@ -146,7 +149,7 @@ class Section:
         if (bottomn==None and bottom) or (bottomn):
             mach.blits(((num_obj.render("0")[0],(105,130)),(num_obj.render("0")[0],(135,130))))
         if (topn==None and top) or (topn):
-            mach.blits(((num_obj.render("+3")[0],(97,50)),(num_obj.render("+3")[0],(129,50))))
+            mach.blits(((num_obj.render("+2")[0],(97,50)),(num_obj.render("+2")[0],(129,50))))
         if (leftn==None and left) or (leftn):
             mach.blits(((num_obj.render("+3")[0],(57,90)),(num_obj.render("-1")[0],(90,90))))
         if (rightn==None and right) or (rightn):
@@ -157,6 +160,29 @@ class Section:
         if dir:
             img = pygame.transform.flip(img,1,0)
         self.objects.append([img,position,character])
+    def config_circle(self,charlist,scorelist,radius,rect,highlight=-1,linecolor="black"):
+        w,h = rect[2],rect[3]
+        circlesurf = pygame.Surface((w,h))
+        circlesurf.fill("white")
+        n = len(charlist)
+        theta = 2*math.pi/n
+        points = []
+        for i in range(n):
+            points.append(((w/2)+radius*math.cos(i*theta),(h/2)+radius*math.sin(i*theta)))
+        for i in range(n):
+            for j in range(i+1,n):
+                pygame.draw.aaline(circlesurf,linecolor,points[i],points[j])
+        if highlight!=-1:
+            for i in range(n):
+                pygame.draw.aaline(circlesurf,"yellow",points[i],points[highlight],blend=2)
+        font_object = pygame.freetype.SysFont("bahnschrift",16)
+        for i in  range(n):
+            img = font_object.render("%d"%scorelist[i])[0]
+            circlesurf.blit(img,((w/2)+(radius+20)*math.cos(i*theta)-(img.get_width()/2),(h/2)+(radius+20)*math.sin(i*theta)-(img.get_height()/2)))
+        for i in  range(n):
+            img = pygame.transform.scale(pygame.image.load(imgloader[charlist[i]]+".png"),(30,35))
+            circlesurf.blit(img,((w/2)+(radius+55)*math.cos(i*theta)-(img.get_width()/2),(h/2)+(radius+55)*math.sin(i*theta)-(img.get_height()/2)))
+        self.objects.append([circlesurf,rect,"circle"])
     def ready_static(self):
         self.background.fill(self.background_color)
         for label in self.labels:
@@ -178,7 +204,9 @@ class Section:
         for obj in self.objects:
             self.background.blit(obj[0],obj[1])
     def flush(self):
-        pass
+        self.objects=[]
+        self.labels=[]
+        self.buttons=[]
     def reset(self):
         pass
     def return_subscreen(self):
