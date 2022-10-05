@@ -32,7 +32,7 @@ def main():
                 return 0
 
     def copykitten(player_response_list,*useless_stuff):
-        if len(player_response_list) < 3:
+        if len(player_response_list) < 2:
             return 1
         return (player_response_list[len(player_response_list)-1] or player_response_list[len(player_response_list)-2])
 
@@ -62,33 +62,50 @@ def main():
                 scores[0]+=getcoin
                 scores[1]-=givecoin
         return scores
-
-    def godstep(godplays,botplays,botname,givecoin=1,getcoin=3,maxsteps=8):
-        godplay = list(godplays)
-        botplay = list(botplays)
-        best = [0,0]
-        firstmove = []
-        currentplay = [godplay,botplay]
-        maxv = givecoin+getcoin
-        def descend(step):
-            s = computescores(currentplay[0],currentplay[1],givecoin,getcoin)
-            if step*maxv<best[1]-s[0]+s[1]:    #PRUNING
-                return
-            if step==0:
-                if (s[0]-s[1])>best[1]:
-                    best[1] = s[0]-s[1]
-                    best[0]=len(firstmove)
-                return
-            currentplay[1].append(char_fun_dict[botname](currentplay[0],currentplay[1]))
-            currentplay[0].append(0)
-            descend(step-1)
-            currentplay[0][len(currentplay[0])-1] = 1
-            if step==maxsteps:
-                firstmove.append(0)
-            descend(step-1)
-            currentplay[0] = currentplay[0][:len(currentplay[0])-1]
-        descend(maxsteps)
-        return best[0]
+    
+    class GodSet:
+        def __init__(self,botname,givecoin=1,getcoin=3,maxsteps=8):
+            self.botfunc = char_fun_dict[botname]
+            self.givecoin = givecoin
+            self.getcoin = getcoin
+            self.maxperstep = givecoin+getcoin
+            self.maxsteps = maxsteps
+            self.godplay = []
+            self.botplay = []
+            self.currentbestmove = 1
+            self.currentmove = 1
+        def godstep(self):
+            self.maxmax = -self.maxperstep*self.maxsteps
+            self.minmin = self.maxperstep*self.maxsteps
+            def descend(step):
+                gsc,bsc = computescores(self.godplay,self.botplay,self.givecoin,self.getcoin)
+                if step==0:
+                    if gsc>self.maxmax:
+                        self.maxmax = gsc
+                        self.minmin = bsc
+                        self.currentbestmove = self.currentmove
+                    elif gsc==self.maxmax and bsc<self.minmin:
+                        print("this ran now")
+                        self.minmin = bsc
+                        self.currentbestmove = self.currentmove
+                    return
+                elif step*self.maxperstep<self.maxmax-gsc:  #Pruning
+                    return
+                self.botplay.append(self.botfunc(self.godplay,self.botplay))
+                self.godplay.append(1)
+                if step==self.maxsteps:
+                    self.currentmove=1
+                descend(step-1)
+                self.godplay[-1]=0
+                if step==self.maxsteps:
+                    self.currentmove=0
+                descend(step-1)
+                self.godplay = self.godplay[:-1]
+                self.botplay = self.botplay[:-1]
+            descend(self.maxsteps)
+            self.botplay.append(self.botfunc(self.godplay,self.botplay))
+            self.godplay.append(self.currentbestmove)
+            return self.currentbestmove
 
     def tourney(bot1,bot2,rounds,givecoins=1,getcoins=3):
         scores = [0,0]
@@ -165,9 +182,6 @@ def main():
     L6 = back.Section((1200,600),'white',"Sandbox Mode")
     L7 = back.Section((1200,600),'white',"God Player")
     L8 = back.Section((1200,600),'white',"Conclusion")
-
-    s = back.Screen((1400,700),(1300,700),"logo.png","The Evolution of Trust",L0,"cyan")
-    s.Ls = [L0,L1,L2,L3,L4,L5,L6,L7,L8]
 
     def L0init():
         L0.flush()
@@ -332,11 +346,13 @@ def main():
                 L3.add_player("char3",(570,300),1)
                 L3.add_player("char4",(780,300),1)
                 L3.add_player("char5",(990,300),1)
+                for b in L3.buttons:
+                    print(b[2][0])
                 L3.add_button("Let's find out!","black",main_font,24,(450,500,300,50),"white","yellow","green","black",[[L3index],[s.switch_section,L3,L3]])
-                return
-            L3.add_label("opponent: %d of 5"%(L3v.character+1),"black",main_font,20,(600,50),-2)
-            L3.add_label("your total score: %d"%(L3v.current_score),"black",main_font,20,(600,80),-2)
-            L3.add_label("%d ~ %d"%tuple(L3v.step_score),"black",main_font,70,(600,120),-2)
+            else:
+                L3.add_label("opponent: %d of 5"%(L3v.character+1),"black",main_font,20,(600,50),-2)
+                L3.add_label("your total score: %d"%(L3v.current_score),"black",main_font,20,(600,80),-2)
+                L3.add_label("%d ~ %d"%tuple(L3v.step_score),"black",main_font,70,(600,120),-2)
         L3.add_button("COOPERATE","black",main_font,24,(350,500,200,50),"white","yellow","green","black",[[L3resp,1],[s.switch_section,L3,L3]])
         L3.add_button("CHEAT","black",main_font,24,(650,500,200,50),"white","yellow","green","black",[[L3resp,0],[s.switch_section,L3,L3]])
 
@@ -644,8 +660,9 @@ def main():
         L7v.activeplayer = "copycat"
         L7v.steplist = [[],[]]
         L7v.scorelist = [0,0]
+        L7v.godv = GodSet(L7v.activeplayer)
         def L7step():
-            r1 = godstep(tuple(L7v.steplist[0]),tuple(L7v.steplist[1]),L7v.activeplayer)
+            r1 = L7v.godv.godstep()
             r2 = char_fun_dict[L7v.activeplayer](L7v.steplist[0],L7v.steplist[1])
             L7v.steplist[0].append(r1)
             L7v.steplist[1].append(r2)
@@ -656,9 +673,13 @@ def main():
                 L7v.scorelist[1]-=1
                 L7v.scorelist[0]+=3
             L7.flush()
-            L7.add_label("Introducing... the God player!","black",main_font,24,(600,50),-2)
-            L7.add_player("char9",(200,265))
-            L7.add_player(imgloader[L7v.activeplayer],(400,265),1)
+            L7.add_label("Introducing... the God player!","black",main_font,24,(600,50),-2,bold=1)
+            L7.add_label("God","black",main_font,24,(230,180),-2,bold=1)
+            L7.add_label(L7v.activeplayer,character_color[L7v.activeplayer],main_font,24,(420,180),-2,bold=1)
+            L7.add_player("char9",(200,220))
+            L7.add_player(imgloader[L7v.activeplayer],(390,220),1)
+            L7.add_label("%d"%L7v.scorelist[0],"black",main_font,48,(230,320),-2)
+            L7.add_label("%d"%L7v.scorelist[1],"black",main_font,48,(420,320),-2)
             L7.add_label("God's moves","black",main_font,24,(600,100),0,bold=1)
             for i in L7v.steplist[0]:
                 if i:
@@ -680,17 +701,22 @@ def main():
             L7v.scorelist = [0,0]
             if setplayer:
                 L7v.activeplayer = setplayer
-            L7.add_label("Introducing... the God player!","black",main_font,24,(600,50),-2)
-            L7.add_player("char9",(200,265))
-            L7.add_player(imgloader[L7v.activeplayer],(400,265),1)
-            L7.add_button("copycat","black",main_font,24,(700,100,150,50),character_color["copycat"],"white",character_color["copycat"],"black",[[L7reset,"copycat"],[s.switch_section,L7,L7]])
-            L7.add_button("all cooperate","black",main_font,24,(900,100,150,50),character_color["all cooperate"],"white",character_color["all cooperate"],"black",[[L7reset,"all cooperate"],[s.switch_section,L7,L7]])
-            L7.add_button("all cheat","black",main_font,24,(700,200,150,50),character_color["all cheat"],"white",character_color["all cheat"],"black",[[L7reset,"all cheat"],[s.switch_section,L7,L7]])
-            L7.add_button("grudger","black",main_font,24,(900,200,150,50),character_color["grudger"],"white",character_color["grudger"],"black",[[L7reset,"grudger"],[s.switch_section,L7,L7]])
-            L7.add_button("detective","black",main_font,24,(700,300,150,50),character_color["detective"],"white",character_color["detective"],"black",[[L7reset,"detective"],[s.switch_section,L7,L7]])
-            L7.add_button("copykitten","black",main_font,24,(900,300,150,50),character_color["copykitten"],"white",character_color["copykitten"],"black",[[L7reset,"copykitten"],[s.switch_section,L7,L7]])
-            L7.add_button("simpleton","black",main_font,24,(700,400,150,50),"gray","white","gray","black",[[L7reset,"simpleton"],[s.switch_section,L7,L7]])
-            L7.add_button("random","black",main_font,24,(900,400,150,50),character_color["random"],"white",character_color["random"],"black",[[L7reset,"random"],[s.switch_section,L7,L7]])
+                L7v.godv = GodSet(setplayer)
+            L7.add_label("Introducing... the God player!","black",main_font,24,(600,50),-2,bold=1)
+            L7.add_label("God","black",main_font,24,(230,180),-2,bold=1)
+            L7.add_label(L7v.activeplayer,character_color[L7v.activeplayer],main_font,24,(420,180),-2,bold=1)
+            L7.add_player("char9",(200,220))
+            L7.add_player(imgloader[L7v.activeplayer],(390,220),1)
+            L7.add_label("%d"%L7v.scorelist[0],"black",main_font,48,(230,320),-2)
+            L7.add_label("%d"%L7v.scorelist[1],"black",main_font,48,(420,320),-2)
+            L7.add_button("copycat","black",main_font,24,(650,100,200,50),character_color["copycat"],"white",character_color["copycat"],"black",[[L7reset,"copycat"],[s.switch_section,L7,L7]])
+            L7.add_button("all cooperate","black",main_font,24,(900,100,200,50),character_color["all cooperate"],"white",character_color["all cooperate"],"black",[[L7reset,"all cooperate"],[s.switch_section,L7,L7]])
+            L7.add_button("all cheat","black",main_font,24,(650,200,200,50),character_color["all cheat"],"white",character_color["all cheat"],"black",[[L7reset,"all cheat"],[s.switch_section,L7,L7]])
+            L7.add_button("grudger","black",main_font,24,(900,200,200,50),character_color["grudger"],"white",character_color["grudger"],"black",[[L7reset,"grudger"],[s.switch_section,L7,L7]])
+            L7.add_button("detective","black",main_font,24,(650,300,200,50),character_color["detective"],"white",character_color["detective"],"black",[[L7reset,"detective"],[s.switch_section,L7,L7]])
+            L7.add_button("copykitten","black",main_font,24,(900,300,200,50),character_color["copykitten"],"white",character_color["copykitten"],"black",[[L7reset,"copykitten"],[s.switch_section,L7,L7]])
+            L7.add_button("simpleton","black",main_font,24,(650,400,200,50),"gray","white","gray","black",[[L7reset,"simpleton"],[s.switch_section,L7,L7]])
+            L7.add_button("random","black",main_font,24,(900,400,200,50),character_color["random"],"white",character_color["random"],"black",[[L7reset,"random"],[s.switch_section,L7,L7]])
             L7.add_button("STEP","black",main_font,24,(200,500,200,50),"white","yellow","green","black",[[L7step],[s.switch_section,L7,L7]])
             L7.add_button("RESET","black",main_font,24,(500,500,200,50),"white","yellow","green","black",[[L7reset],[s.switch_section,L7,L7]])
             L7.add_button("Conclude","black",main_font,24,(800,500,200,50),"white","yellow","green","black",[[L8init],[s.switch_section,L7,L8]])
@@ -728,6 +754,7 @@ def main():
         L8.add_label("cultural markers, blah blah blah. And let's not forget...","black",main_font,18,(100,520),1.2)
         L8.add_button("...the biggest lesson.","black",main_font,24,(600,525,400,50),"white","yellow","green","black",[[L8next],[s.switch_section,L8,L8]])
 
+    s = back.Screen((1400,700),(1300,700),"logo.png","The Evolution of Trust",L0,{L0:L0init,L1:L1init,L2:L2init,L3:L3init,L4:L4init,L5:L5init,L6:L6init,L7:L7init,L8:L8init},"cyan")
     L0init()
     s.switch_section(0,L0)
 

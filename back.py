@@ -14,7 +14,7 @@ def end():
     exit(1)
 
 class Screen:
-    def __init__(self,initial_size,minimum_size,logo_path,caption,initial_subscreen,color_name='black'):
+    def __init__(self,initial_size,minimum_size,logo_path,caption,initial_subscreen,navigators={},color_name='black'):
         self.screen = pygame.display.set_mode(initial_size,pygame.RESIZABLE)
         self.size = list(initial_size)
         self.minimum_size = minimum_size
@@ -22,8 +22,13 @@ class Screen:
         pygame.display.set_caption(caption)
         self.fill_color = color_name
         self.current_subscreen = initial_subscreen
+        self.navigators = navigators
+        self.navid = list(navigators.keys()).index(initial_subscreen)
+        self.navn = len(self.navigators)
         self.hovering = -1
         self.active = -1
+        self.keypress1 = 0
+        self.keypress2 = 0
     def before(self):
         self.screen.fill(self.fill_color)
     def after(self):
@@ -76,6 +81,26 @@ class Screen:
                             for f in buttons[self.active][8]:
                                 f[0](*f[1:])
                             state_change = 1
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_RIGHT:
+                        if not self.keypress1 and self.navid<self.navn-1:
+                            self.navid+=1
+                            self.current_subscreen = list(self.navigators.keys())[self.navid]
+                            self.navigators[self.current_subscreen]()
+                            self.switch_section(0,self.current_subscreen)
+                        self.keypress1 = 1
+                    elif event.key == pygame.K_LEFT:
+                        if not self.keypress2 and self.navid>0:
+                            self.navid-=1
+                            self.current_subscreen = list(self.navigators.keys())[self.navid]
+                            self.navigators[self.current_subscreen]()
+                            self.switch_section(0,self.current_subscreen)
+                        self.keypress2 = 1
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_RIGHT:
+                        self.keypress1 = 0
+                    elif event.key == pygame.K_LEFT:
+                        self.keypress2 = 0
             if refresher:
                 mp = pygame.mouse.get_pos()
                 for i in range(len(buttons)):
@@ -102,7 +127,7 @@ class Screen:
         if f!=0:
             f.enabled = False
         else:
-            for Li in self.Ls:
+            for Li in list(self.navigators.keys()):
                 Li.enabled = False
         t.enabled = True
         self.flush()
