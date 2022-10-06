@@ -693,7 +693,7 @@ def main():
                 else:
                     L7.add_label("Cheat","black",main_font,24,(900,100),1.2)
             L7.add_button("STEP","black",main_font,24,(200,500,200,50),"white","yellow","green","black",[[L7step],[s.switch_section,L7,L7]])
-            L7.add_button("RESET","black",main_font,24,(500,500,200,50),"white","yellow","green","black",[[L7reset],[s.switch_section,L7,L7]])
+            L7.add_button("RESET","black",main_font,24,(500,500,200,50),"white","yellow","green","black",[[L7reset,L7v.activeplayer],[s.switch_section,L7,L7]])
             L7.add_button("Conclude","black",main_font,24,(800,500,200,50),"white","yellow","green","black",[[L8init],[s.switch_section,L7,L8]])
         def L7reset(setplayer=None):
             L7.flush()
@@ -701,7 +701,7 @@ def main():
             L7v.scorelist = [0,0]
             if setplayer:
                 L7v.activeplayer = setplayer
-                L7v.godv = GodSet(setplayer)
+            L7v.godv = GodSet(L7v.activeplayer)
             L7.add_label("Introducing... the God player!","black",main_font,24,(600,50),-2,bold=1)
             L7.add_label("God","black",main_font,24,(230,180),-2,bold=1)
             L7.add_label(L7v.activeplayer,character_color[L7v.activeplayer],main_font,24,(420,180),-2,bold=1)
