@@ -13,7 +13,3 @@ pip install pygame
 It is recommended to view on a display with HD resolution (1366x768) or higher.
 
 If the in-game fonts render improperly (especially in the case of Macbooks), consider downloading [this font](https://freefontsfamily.com/bahnschrift-font-free-download/) from [FreeFontsFamily](https://freefontsfamily.com/).
-
-## Feedback
-
-Suggestions are welcome! Feel free to DM me [here](https://m.me/atreyasaurabh/).
